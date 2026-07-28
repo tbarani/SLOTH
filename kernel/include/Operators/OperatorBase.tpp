@@ -972,6 +972,14 @@ SlothNLFormIntegrator<Variables<T, DIM>>* OperatorBase<T, DIM>::get_rhs_integrat
       return new LatentHeatNLFormIntegrator<Variables<T, DIM>>(
           this->geometry_, dt, vun, vauxn, all_params, this->auxvariables_, this->coefficients_);
     }
+    case Integrators::PhaseChangeSource: {
+      return new PhaseChangeSourceNLFormIntegrator<Variables<T, DIM>>(
+          this->geometry_, dt, vun, vauxn, all_params, this->auxvariables_, this->coefficients_);
+    }
+    case Integrators::MassSource: {
+      return new MassSourceNLFormIntegrator<Variables<T, DIM>>(
+          this->geometry_, dt, vun, vauxn, all_params, this->auxvariables_, this->coefficients_);
+    }
     default:
       mfem::mfem_error("RHS Integrators not found. Please check your data.");
   }

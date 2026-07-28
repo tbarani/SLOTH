@@ -121,7 +121,9 @@ enum class GlossaryType {
   RobinA,
   RobinB,
   ExplicitTime,
-  Dirichlet
+  Dirichlet,
+  DefectDensity,
+  Source
 };
 
 struct GlossaryQuantity {
@@ -304,6 +306,26 @@ static const GlossaryQuantity Nucleus =
 static const GlossaryQuantity DrivingForce =
     GlossaryQuantity(GlossaryType::ThermodynamicPotential, GlossaryUnit::Joules,
                      "Driving force in " + toString(GlossaryUnit::Joules));
+
+/**
+ * @brief Quantity associated with the density of a conserved species, expressed as a function of
+ *        the solved variables and of the auxiliary variables.
+ *
+ * @remark Used by the PhaseChangeSource integrator to build the contribution of the phase change to
+ *         the conservation equation, i.e. the time variation of the density at frozen solved
+ *         variables.
+ */
+static const GlossaryQuantity DefectDensity = GlossaryQuantity(
+    GlossaryType::DefectDensity, GlossaryUnit::None, "Density of a conserved species (per volume)");
+
+/**
+ * @brief Quantity associated with a volumetric production rate of a conserved species
+ *
+ * @remark Unlike the source term given to the Operators, which is a function of space and time
+ *         only, this quantity may depend on the solved and auxiliary variables.
+ */
+static const GlossaryQuantity Source = GlossaryQuantity(
+    GlossaryType::Source, GlossaryUnit::None, "Volumetric production rate (per volume, per time)");
 
 /**
  * @brief Quantity associated with the free energy used in phase-field equations

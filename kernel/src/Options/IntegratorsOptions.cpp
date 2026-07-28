@@ -48,6 +48,8 @@ Integrators::value Integrators::from(const std::string& v) {
       {"MeltingConstant", Integrators::MeltingConstant},
       {"MassFlux", Integrators::MassFlux},
       {"LatentHeat", Integrators::LatentHeat},
+      {"PhaseChangeSource", Integrators::PhaseChangeSource},
+      {"MassSource", Integrators::MassSource},
       {"Neumann", Integrators::Neumann},
       {"Robin", Integrators::Robin}};
   return m.find("Integrators", v);

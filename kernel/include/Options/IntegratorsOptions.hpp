@@ -48,6 +48,8 @@ struct Integrators {
     MeltingConstant,
     MassFlux,
     LatentHeat,
+    PhaseChangeSource,
+    MassSource,
     Neumann,
     Robin
   };

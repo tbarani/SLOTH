@@ -38,6 +38,8 @@
 #include "Integrators/MeltingConstantNLFormIntegrator.hpp"
 #include "Integrators/MeltingTemperatureNLFormIntegrator.hpp"
 #include "Integrators/NeumannNLFormIntegrator.hpp"
+#include "Integrators/MassSourceNLFormIntegrator.hpp"
+#include "Integrators/PhaseChangeSourceNLFormIntegrator.hpp"
 #include "Integrators/RobinNLFormIntegrator.hpp"
 #include "Integrators/SlothNLFormIntegrator.hpp"
 #include "Integrators/TimeCHNLFormIntegrator.hpp"
