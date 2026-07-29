@@ -1,0 +1,23 @@
+[
+    {
+    "expression":"mbar * ( Sum(eta[i]*eta[i]*eta[i]*eta[i]/4.0 - eta[i]*eta[i]/2.0 , (i, 1, 2)) + 0.5 * gmm * ( Sum((eta[i]*eta[i])*(eta[j]*eta[j]),(i, 1, 2),(j, 1, 2)) - Sum(eta[i]*eta[i]*eta[i]*eta[i],(i, 1, 2)) ) + 0.25 )",
+    "constants":"(mbar:0.0046875),(gmm:1.5)",
+    "variables":"eta(1..2)",
+    "class_name":"FgMultiWell",
+    "outputfile":"FissionGasCoefficients"
+    },
+    {
+    "expression":"mbar * ( Sum(eta[i]*eta[i]*eta[i]*eta[i]/4.0 - eta[i]*eta[i]/2.0 , (i, 1, 2)) + 0.5 * gmb * ( Sum((eta[i]*eta[i])*(eta[j]*eta[j]),(i, 1, 2),(j, 1, 2)) - Sum(eta[i]*eta[i]*eta[i]*eta[i],(i, 1, 2)) ) + 0.25 )",
+    "constants":"(mbar:0.0046875),(gmb:0.922)",
+    "variables":"eta(1..2)",
+    "class_name":"FgMultiWellMB",
+    "outputfile":"FissionGasCoefficients"
+    },
+    {
+    "expression":"0.263671875*sdot(eta(1..2))",
+    "variables":"eta(1..2)",
+    "class_name":"FgGradEnergy",
+    "outputfile":"FissionGasCoefficients",
+    "gradient":true
+    }
+]
