@@ -1,6 +1,6 @@
 /**
  * @file PhaseChangeSourceNLFormIntegrator.hpp
- * @author Tommaso Barani
+ * @author tb263902
  * @brief Contribution of a phase change to the conservation equation of a species solved in terms
  *        of its chemical potential.
  * @version 0.2
@@ -43,18 +43,9 @@
 #include "mfem.hpp"  // NOLINT [no include the directory when naming mfem include file]
 
 /**
- * @brief Phase-change contribution to a conservation equation written in terms of a chemical
- *        potential.
+ * @brief Phase-change contribution to a conservation equation written in chemical potential (for grand potential formalism).
  *
- * Given a species whose density @f$ \rho @f$ depends both on the solved variable @f$ \mu @f$ and on
- * auxiliary variables @f$ \eta @f$ (typically phase-field order parameters), the conservation
- * equation
- * @f[
- *   \frac{\partial \rho(\mu,\eta)}{\partial t} = \nabla\cdot(D\chi\nabla\mu) + s
- * @f]
- * is solved with @f$ \chi = \partial\rho/\partial\mu @f$ carried by the time integrator
- * (HeatTimeDerivative), which provides @f$ \chi\,\partial\mu/\partial t @f$. The remaining part of
- * the total derivative, i.e. the variation of the density at frozen @f$ \mu @f$,
+ * The variation of the density at a given order parameter @f$ \mu @f$,
  * @f[
  *   \sum_{\alpha i} \frac{\partial \rho}{\partial \eta_{\alpha i}}
  *                   \frac{\partial \eta_{\alpha i}}{\partial t}
@@ -65,9 +56,7 @@
  *   \frac{\rho(\mu^{n+1},\eta^{n+1}) - \rho(\mu^{n+1},\eta^{n})}{\Delta t}.
  * @f]
  *
- * The production rate @f$ s @f$ is handled separately by MassSourceNLFormIntegrator.
- *
- * @remark The density coefficient is of type GlossaryType::DefectDensity and is mandatory.
+ * @remark The density coefficient is of type GlossaryType::DefectDensity.
  *
  * @tparam VARS Template parameter defining the variables used
  *              in the integrator.

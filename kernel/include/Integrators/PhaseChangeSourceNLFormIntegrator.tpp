@@ -1,6 +1,6 @@
 /**
  * @file PhaseChangeSourceNLFormIntegrator.tpp
- * @author Tommaso Barani
+ * @author tb263902
  * @brief Contribution of a phase change to the conservation equation of a species solved in terms
  *        of its chemical potential.
  * @version 0.2
@@ -27,8 +27,10 @@
 
 #pragma once
 #include <algorithm>
+#include <cassert>
 #include <list>
 #include <memory>
+#include <mfem/general/error.hpp>
 #include <span>
 #include <string>
 #include <tuple>
@@ -46,14 +48,10 @@
 /**
  * @brief Construct a new PhaseChangeSourceNLFormIntegrator object.
  *
- * This constructor initializes the nonlinear form integrator. It forwards the provided previous
- * solution fields, simulation parameters, auxiliary variables, and coefficients to the base SLOTH
- * nonlinear form integrator.
- *
  * @tparam VARS Template parameter defining the variables used
  *              in the integrator.
  *
- * @param u_old        Vector of previous-time-step solution fields.
+ * @param u_old        Vector of previous time step solutions.
  * @param params       Paramters that can be used with the integrator.
  * @param auxvars      Auxiliary variables required by the inetgrator.
  * @param coefficients List of coefficients defining material properties.
@@ -71,11 +69,6 @@ PhaseChangeSourceNLFormIntegrator<VARS>::PhaseChangeSourceNLFormIntegrator(
 
 /**
  * @brief Initialize the integrator.
- *
- * This method performs all necessary setup steps for the integrator:
- * 1. Checks that all coefficients contain the expected types.
- * 2. Retrieves and stores the coefficients internally.
- * 3. Stores the auxiliary variables at the current and at the previous time step.
  *
  * @tparam VARS Template parameter defining the variables used
  *              in the integrator.
@@ -108,14 +101,7 @@ void PhaseChangeSourceNLFormIntegrator<VARS>::init() {
  *
  * @tparam VARS Template parameter defining the variables used in the integrator.
  *
- * @param el      Array of pointers to finite elements.
- * @param Tr      Element transformation.
- * @param elfun   Array of local finite element solution vectors.
- * @param elvect  Array of vectors where the computed element residual contributions
- *                will be stored.
- *
- * @note Users typically do not call this function directly; it is invoked
- *       internally during the assembly of the global nonlinear form.
+ * @note It is called during the assembly of the global nonlinear form.
  */
 template <class VARS>
 void PhaseChangeSourceNLFormIntegrator<VARS>::AssembleElementVector(
@@ -154,10 +140,10 @@ void PhaseChangeSourceNLFormIntegrator<VARS>::AssembleElementVector(
         weight_coef *= AxiCylindricalCoefficient().Eval(Tr, ip);
       }
 
-      const double rate = this->get_rate_at_ip(blk, std::span<const double>(u_values),
-                                               std::span<const double>(vaux_gf_at_ip),
-                                               std::span<const double>(vaux_old_gf_at_ip)) *
-                          weight_coef;
+      const auto rate = this->get_rate_at_ip(blk, std::span<const double>(u_values),
+                                             std::span<const double>(vaux_gf_at_ip),
+                                             std::span<const double>(vaux_old_gf_at_ip)) *
+                        weight_coef;
       add(*elvect[blk], rate, Psi, *elvect[blk]);
     }
   }
@@ -174,14 +160,6 @@ void PhaseChangeSourceNLFormIntegrator<VARS>::AssembleElementVector(
  *
  * @tparam VARS Template parameter defining the variables used in the integrator.
  *
- * @param el      Array of pointers to finite elements.
- * @param Tr      Element transformation.
- * @param elfun   Array of local finite element solution vectors.
- * @param elmats  Array of dense matrices where the computed element Jacobian contributions
- *                will be stored.
- *
- * @note Users typically do not call this function directly; it is invoked
- *       internally during the assembly of the global nonlinear form.
  */
 template <class VARS>
 void PhaseChangeSourceNLFormIntegrator<VARS>::AssembleElementGrad(
@@ -264,12 +242,7 @@ void PhaseChangeSourceNLFormIntegrator<VARS>::get_coefficients() {
  *
  * @tparam VARS Template parameter defining the variables used in the integrator.
  *
- * @param blk              Index of the block.
- * @param values           Values of the current and previous solutions at the integration point.
- * @param aux_values       Values of the auxiliary variables at the current time step.
- * @param aux_old_values   Values of the auxiliary variables at the previous time step.
- *
- * @return The computed contribution at the integration point.
+ * @return The computed derivative at the integration point.
  */
 template <class VARS>
 double PhaseChangeSourceNLFormIntegrator<VARS>::get_rate_at_ip(
@@ -278,6 +251,7 @@ double PhaseChangeSourceNLFormIntegrator<VARS>::get_rate_at_ip(
   const double density_value = this->compute_coefficient(density[blk], values, aux_values);
   const double density_old_value = this->compute_coefficient(density[blk], values, aux_old_values);
 
+  MFEM_ASSERT(this->time_step > 0., "Null time step, no derivative is calculated.");
   return (density_value - density_old_value) / this->time_step_;
 }
 
@@ -286,11 +260,6 @@ double PhaseChangeSourceNLFormIntegrator<VARS>::get_rate_at_ip(
  *        variable of the block, at an integration point.
  *
  * @tparam VARS Template parameter defining the variables used in the integrator.
- *
- * @param blk              Index of the block.
- * @param values           Values of the current and previous solutions at the integration point.
- * @param aux_values       Values of the auxiliary variables at the current time step.
- * @param aux_old_values   Values of the auxiliary variables at the previous time step.
  *
  * @return The computed derivative at the integration point.
  */
@@ -303,5 +272,6 @@ double PhaseChangeSourceNLFormIntegrator<VARS>::get_rate_derivative_at_ip(
   const double gradient_old_value =
       this->compute_gradient_coefficient(density[blk], blk, values, aux_old_values);
 
+  MFEM_ASSERT(this->time_step > 0., "Null time step, no derivative is calculated.");
   return (gradient_value - gradient_old_value) / this->time_step_;
 }
