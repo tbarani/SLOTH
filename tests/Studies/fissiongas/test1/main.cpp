@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "./FissionGasCoefficients.hpp"
+#include "AnalyticalFunctions/AnalyticalFunctions.hpp"
 #include "Sloth/sloth.hpp"
 #include "Sloth/tests.hpp"
 
@@ -115,7 +116,8 @@ void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "Maximum number of iterations of the nonlinear solvers.");
   args.AddOption(&p.control_diffusivity_factor, "-df", "--diffusivity_factor",
                  "Scaling applied to the diffusivity of both species.");
-  args.AddOption(&p.control_bubble_radius, "-r", "--bubble_radius", "Initial radius of the bubbles.");
+  args.AddOption(&p.control_bubble_radius, "-r", "--bubble_radius",
+                 "Initial radius of the bubbles.");
   args.AddOption(&p.control_l_gb, "-lgb", "--l_gb", "Cell size along the boundary, per bubble.");
   args.AddOption(&p.control_lx, "-lx", "--lx", "Domain size across the boundary.");
   args.AddOption(&p.control_dx, "-dx", "--element_size", "Size of an element.");
@@ -186,29 +188,33 @@ int main(int argc, char* argv[]) {
 
   mfem::Vector y_translation({0.0, ly});
   std::vector<mfem::Vector> translations = {y_translation};
-  const std::tuple<int, int, double, double>& tuple_of_dimensions =
-      std::make_tuple(nx, ny, lx, ly);
+  const std::tuple<int, int, double, double>& tuple_of_dimensions = std::make_tuple(nx, ny, lx, ly);
 
-  SPA spatial(mesh_type, order_fe, refinement_level, tuple_of_dimensions, translations);
-
+  SPA spatial(mesh_type, order_fe, refinement_level, tuple_of_dimensions, true);
+  SPA spatial_muv(spatial.get_mesh(), order_fe);
+  SPA spatial_mug(spatial.get_mesh(), order_fe);
+  SPA spatial_v1(spatial.get_mesh(), order_fe);
+  SPA spatial_v2(spatial.get_mesh(), order_fe);
   // ##############################
   //     Boundary conditions     //
   // ##############################
-  auto boundaries = {Boundary("lower", 0, "Periodic"), Boundary("right", 1, "Neumann"),
-                     Boundary("upper", 2, "Periodic"), Boundary("left", 3, "Neumann")};
+  auto boundaries = {Boundary("lower", 0, "Neumann"), Boundary("right", 1, "Neumann"),
+                     Boundary("upper", 2, "Neumann"), Boundary("left", 3, "Neumann")};
   auto op_bcs = BoundaryConditions<FECollection, DIM>(&spatial, boundaries);
-  auto muv_bcs = BoundaryConditions<FECollection, DIM>(&spatial, boundaries);
-  auto mug_bcs = BoundaryConditions<FECollection, DIM>(&spatial, boundaries);
+  auto eta1_bcs = BoundaryConditions<FECollection, DIM>(&spatial_v1, boundaries);
+  auto eta2_bcs = BoundaryConditions<FECollection, DIM>(&spatial_v2, boundaries);
+  auto muv_bcs = BoundaryConditions<FECollection, DIM>(&spatial_muv, boundaries);
+  auto mug_bcs = BoundaryConditions<FECollection, DIM>(&spatial_mug, boundaries);
 
   // ###########################################
   //            Physical models               //
   // ###########################################
   // Non-dimensionalised model parameters (Table 1 of the reference)
-  const double kappa = 0.52734375;      // (3/4) sigma_mm l_int
-  const double mobility_value = 0.1;    // order parameter mobility
+  const double kappa = 0.52734375;                                  // (3/4) sigma_mm l_int
+  const double mobility_value = 0.1;                                // order parameter mobility
   const double diffusivity = 1.e-2 * p.control_diffusivity_factor;  // D_g = D_v = 0.1 nm2/s
-  const double source_gas = 2.35e-10 * p.control_source_factor;  // s_g^0 = 2.35e12 at/(cm3 s)
-  const double source_vac = 2.35e-9 * p.control_source_factor;   // s_v^0 = 10 s_g^0
+  const double source_gas = 2.35e-10 * p.control_source_factor;     // s_g^0 = 2.35e12 at/(cm3 s)
+  const double source_vac = 2.35e-9 * p.control_source_factor;      // s_v^0 = 10 s_g^0
 
   // Order parameters.
   //
@@ -217,8 +223,8 @@ int main(int argc, char* argv[]) {
   // couples distinct order parameters keeps one factor at the new time step and evaluates the
   // others at the old one:
   //
-  //   gamma eta_i^2 eta_j^2   ->   gamma ( eta_i^2 etan_j^2 + eta_j^2 etan_i^2 - etan_i^2 etan_j^2 )
-  //   h_a(eta) omega_a        ->   the interpolation is expanded around eta^n, keeping only the
+  //   gamma eta_i^2 eta_j^2   ->   gamma ( eta_i^2 etan_j^2 + eta_j^2 etan_i^2 - etan_i^2 etan_j^2
+  //   ) h_a(eta) omega_a        ->   the interpolation is expanded around eta^n, keeping only the
   //                                numerator of h_a at the new time step.
   //
   // Both are built so that, for every block, the derivative with respect to that block reduces to
@@ -318,11 +324,11 @@ int main(int argc, char* argv[]) {
         return bubble_field(x);
       });
 
-  auto op_v1 =
-      VAR(&spatial, op_bcs, "eta_m1", Glossary::PhaseField, 2, AnalyticalFunctions<DIM>(ic_grain_1));
+  auto op_v1 = VAR(&spatial_v1, eta1_bcs, "eta_m1", Glossary::PhaseField, 2,
+                   AnalyticalFunctions<DIM>(ic_grain_1));
   op_v1.set_additional_information("eta");
-  auto op_v2 =
-      VAR(&spatial, op_bcs, "eta_m2", Glossary::PhaseField, 2, AnalyticalFunctions<DIM>(ic_grain_2));
+  auto op_v2 = VAR(&spatial_v2, eta2_bcs, "eta_m2", Glossary::PhaseField, 2,
+                   AnalyticalFunctions<DIM>(ic_grain_2));
   op_v2.set_additional_information("eta");
   auto op_v3 =
       VAR(&spatial, op_bcs, "eta_b0", Glossary::PhaseField, 2, AnalyticalFunctions<DIM>(ic_bubble));
@@ -331,11 +337,15 @@ int main(int argc, char* argv[]) {
 
   // mu = 0 puts each phase at its own equilibrium composition, i.e. the bubbles start at
   // c_g^{b,eq} = 0.454 and the matrix at exp(-E_f/kT), as prescribed in the reference.
-  auto muv_v = VAR(&spatial, muv_bcs, "mu_v", Glossary::ChemicalPotential, 2, 0.);
+  auto ic_muv = std::function<double(const mfem::Vector&, double)>(
+      [](const mfem::Vector& x, [[maybe_unused]] double time) { return 0.; });
+  auto muv_v = VAR(&spatial_muv, muv_bcs, "mu_v", Glossary::ChemicalPotential, 2,
+                   AnalyticalFunctions<DIM>(ic_muv));
   muv_v.set_additional_information("mu");
   auto muv_vars = VARS(muv_v);
 
-  auto mug_v = VAR(&spatial, mug_bcs, "mu_g", Glossary::ChemicalPotential, 2, 0.);
+  auto mug_v = VAR(&spatial_mug, mug_bcs, "mu_g", Glossary::ChemicalPotential, 2,
+                   AnalyticalFunctions<DIM>(ic_muv));
   mug_v.set_additional_information("mu");
   auto mug_vars = VARS(mug_v);
 
@@ -354,29 +364,15 @@ int main(int argc, char* argv[]) {
   // of the production term and of the susceptibility.
   std::map<std::string, std::tuple<double, double>> muv_integral = {{"mu_v", {-1.e30, 1.e30}}};
   std::map<std::string, std::tuple<double, double>> mug_integral = {{"mu_g", {-1.e30, 1.e30}}};
+  std::map<std::string, std::tuple<double, double>> var_integral = {
+      {"eta_b0", {-1.1, 1.1}}, {"mu_v", {-1.e30, 1.e30}}, {"mu_g", {-1.e30, 1.e30}}};
 
-  auto op_p_pst = Parameters(
-      Parameter("main_folder_path", main_folder_path),
-      Parameter("calculation_path", "OrderParameters"), Parameter("frequency", frequency),
-      Parameter("level_of_detail", level_of_detail), Parameter("enable_compute_energies", true),
-      Parameter("integral_to_compute", bubble_integral),
-      Parameter("enable_save_specialized_at_iter", true));
-
-  // No free energy is attached to the chemical potential problems, so the energy post-processing
-  // must be switched off for them.
-  auto muv_p_pst = Parameters(
-      Parameter("main_folder_path", main_folder_path), Parameter("calculation_path", "MuVac"),
+  auto v_p_pst = Parameters(
+      Parameter("main_folder_path", main_folder_path), Parameter("calculation_path", "Bubbles"),
       Parameter("frequency", frequency), Parameter("level_of_detail", level_of_detail),
-      Parameter("enable_compute_energies", true),
-      Parameter("integral_to_compute", muv_integral),
+      Parameter("enable_compute_energies", true), Parameter("integral_to_compute", var_integral),
       Parameter("enable_save_specialized_at_iter", true));
-
-  auto mug_p_pst = Parameters(
-      Parameter("main_folder_path", main_folder_path), Parameter("calculation_path", "MuGas"),
-      Parameter("frequency", frequency), Parameter("level_of_detail", level_of_detail),
-      Parameter("enable_compute_energies", true),
-      Parameter("integral_to_compute", mug_integral),
-      Parameter("enable_save_specialized_at_iter", true));
+  auto v_pst = PST(&spatial, v_p_pst);
 
   // ####################
   //     operators     //
@@ -387,21 +383,29 @@ int main(int argc, char* argv[]) {
                  Parameter("iter_max", p.control_newton_iter),
                  Parameter("rel_tol", p.control_newton_rtol), Parameter("abs_tol", 1.e-14));
 
-  std::vector<SPA*> op_spatials{&spatial, &spatial, &spatial};
+  std::vector<SPA*> op_spatials{&spatial, &spatial_v1, &spatial_v2};
   OPE op_oper(op_spatials, {"AllenCahn"}, TimeScheme::EulerImplicit, "TimeDerivative");
   op_oper.overload_nl_solver(NLSolverType::NEWTON, newton_params);
-  auto op_pst = PST(&spatial, op_p_pst);
+  const auto& solver = HypreSolverType::HYPRE_GMRES;
+  const auto& precond = HyprePreconditionerType::HYPRE_ILU;
+  op_oper.overload_solver(solver);
+  op_oper.overload_preconditioner(precond);
 
-  std::vector<SPA*> mu_spatials{&spatial};
+  std::vector<SPA*> mu_spatials{&spatial_muv};
   OPE muv_oper(mu_spatials, {"Fourier", "PhaseChangeSource", "MassSource"},
                TimeScheme::EulerImplicit, "HeatTimeDerivative");
   muv_oper.overload_nl_solver(NLSolverType::NEWTON, newton_params);
-  auto muv_pst = PST(&spatial, muv_p_pst);
+  const auto& ch_solver = HypreSolverType::HYPRE_GMRES;
+  const auto& ch_precond = HyprePreconditionerType::HYPRE_ILU;
+  muv_oper.overload_solver(ch_solver);
+  muv_oper.overload_preconditioner(ch_precond);
 
-  OPE mug_oper(mu_spatials, {"Fourier", "PhaseChangeSource", "MassSource"},
+  std::vector<SPA*> mug_spatials{&spatial_mug};
+  OPE mug_oper(mug_spatials, {"Fourier", "PhaseChangeSource", "MassSource"},
                TimeScheme::EulerImplicit, "HeatTimeDerivative");
   mug_oper.overload_nl_solver(NLSolverType::NEWTON, newton_params);
-  auto mug_pst = PST(&spatial, mug_p_pst);
+  mug_oper.overload_solver(ch_solver);
+  mug_oper.overload_preconditioner(ch_precond);
 
   // ####################
   //     problems      //
@@ -409,11 +413,26 @@ int main(int argc, char* argv[]) {
   // The order parameters are solved first, so that the chemical potential problems see the
   // auxiliary variables at the new time step and their previous values at the old one, which is
   // what the PhaseChangeSource integrator needs.
-  PB op_pb("OrderParameters", op_oper, op_vars, {op_coef, op_coef, op_coef}, op_pst, muv_vars,
+  PB op_pb("OrderParameters", op_oper, op_vars, {op_coef, op_coef, op_coef}, v_pst, muv_vars,
            mug_vars);
-  PB muv_pb("MuVac", muv_oper, muv_vars, {muv_coef}, muv_pst, op_vars);
-  PB mug_pb("MuGas", mug_oper, mug_vars, {mug_coef}, mug_pst, op_vars);
+  PB muv_pb("MuVac", muv_oper, muv_vars, {muv_coef}, v_pst, op_vars);
+  PB mug_pb("MuGas", mug_oper, mug_vars, {mug_coef}, v_pst, op_vars);
+  // AMR
+  /////////////////////////////////
+  ///  AC
+  mfem::ConstantCoefficient amr_coef_ac{1.0};
+  mfem::DiffusionIntegrator amr_integ_ac{amr_coef_ac};
+  SlothErrorEstimators estimator_ac(ErrorEstimatorType::KELLY, &amr_integ_ac);
 
+  MultiVariableMaxAMR<VARS> amr_ac(*spatial.get_mesh(), spatial.is_nc_simplices());
+
+  auto amr_params = Parameters(Parameter("max_elem_error", 1.e-4), Parameter("amr_max_level", 3),
+                               Parameter("nc_limit", 0), Parameter("max_preref_cycles", 3));
+
+  amr_ac.SetCriteria(/*estimator*/ &estimator_ac, amr_params);
+  op_pb.set_amr(&amr_ac);
+  /////////////////////////////////
+  // AMR
   auto cc = Coupling("Intergranular fission gas bubbles", op_pb, muv_pb, mug_pb);
 
   // The order parameters and the chemical potentials are coupled both ways: the driving force of
@@ -444,8 +463,9 @@ int main(int argc, char* argv[]) {
         return std::clamp(dt_ratio * time, dt_min, dt_max);
       });
 
-  auto time_params = Parameters(Parameter("initial_time", p.control_initial_time),
-                                Parameter("final_time", p.control_final_time));
+  auto time_params =
+      Parameters(Parameter("initial_time", p.control_initial_time),
+                 Parameter("final_time", p.control_final_time), Parameter("vtk_unified", true));
   auto time = TimeDiscretization(user_time_step, time_params, cc);
 
   time.solve();
