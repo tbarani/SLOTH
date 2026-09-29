@@ -336,11 +336,11 @@ int main(int argc, char* argv[]) {
   Coefficients mug_coef(mug_unit, mug_chi, mug_cond, mug_density, mug_source, mug_total);
 
   // post processing
-  Coefficient switch_bbl(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionBubble());
-  switch_bbl.set_name("h_b");
-  Coefficient switch_gr1(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionGrain1());
-  switch_gr1.set_name("h_g1");
-  Coefficient switch_gr2(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionGrain2());
+  Coefficient switch_bbl(Glossary::PhaseField, Scheme::Implicit, SwitchingFunctionBubble());
+  switch_bbl.set_name("h_g1");
+  Coefficient switch_gr1(Glossary::PhaseField, Scheme::Implicit, SwitchingFunctionGrain1());
+  switch_gr1.set_name("h_b");
+  Coefficient switch_gr2(Glossary::PhaseField, Scheme::Implicit, SwitchingFunctionGrain2());
   switch_gr2.set_name("h_g2");
   // ####################
   //     variables     //
@@ -481,9 +481,6 @@ int main(int argc, char* argv[]) {
   // ####################
   //     problems      //
   // ####################
-  // The order parameters are solved first, so that the chemical potential problems see the
-  // auxiliary variables at the new time step and their previous values at the old one, which is
-  // what the PhaseChangeSource integrator needs.
   PB op_pb("OrderParameters", op_oper, op_vars, {op_coef, op_coef, op_coef}, v_pst, muv_vars,
            mug_vars);
   PB muv_pb("MuVac", muv_oper, muv_vars, {muv_coef}, v_pst, op_vars);
@@ -504,7 +501,7 @@ int main(int argc, char* argv[]) {
 
   amr_ac.SetCriteria(/*estimator*/ &estimator_ac, amr_params);
   op_pb.set_amr(&amr_ac);
-  op_pb.set_vtk_coefficients({switch_bbl, switch_gr1, switch_gr2});
+  mug_pb.set_vtk_coefficients({switch_gr1, switch_gr2, switch_bbl});
   /////////////////////////////////
   // AMR
   auto cc = Coupling("Intergranular fission gas bubbles", op_pb, muv_pb, mug_pb);

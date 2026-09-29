@@ -1,78 +1,81 @@
 [
     {
-    "expression":"mbar * ( (eta1*eta1*eta1*eta1/4.0 - eta1*eta1/2.0) + (eta2*eta2*eta2*eta2/4.0 - eta2*eta2/2.0) + (eta3*eta3*eta3*eta3/4.0 - eta3*eta3/2.0) + gmm*eta1*eta1*eta2*eta2 + gmb*(eta1*eta1*eta3*eta3 + eta2*eta2*eta3*eta3) + 0.25 ) - 0.5*(muv*muv + mug*mug)/(Va*Va*k) - ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)) * ( muv*cvmeq + mug*cgmeq )/Va - ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)) * ( muv*cvbeq + mug*cgbeq )/Va",
-    "constants":"(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(k:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
-    "variables":"eta(1..3)",
-    "auxiliary_variables":"muv,mug",
-    "class_name":"FgFreeEnergy",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "mbar * ( (eta1*eta1*eta1*eta1/4.0 - eta1*eta1/2.0) + (eta2*eta2*eta2*eta2/4.0 - eta2*eta2/2.0) + (eta3*eta3*eta3*eta3/4.0 - eta3*eta3/2.0) + gmm*eta1*eta1*eta2*eta2 + gmb*(eta1*eta1*eta3*eta3 + eta2*eta2*eta3*eta3) + 0.25 ) - 0.5*(muv*muv + mug*mug)/(Va*Va*k) - ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)) * ( muv*cvmeq + mug*cgmeq )/Va - ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)) * ( muv*cvbeq + mug*cgbeq )/Va",
+        "constants": "(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(k:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
+        "variables": "eta(1..3)",
+        "auxiliary_variables": "muv,mug",
+        "class_name": "FgFreeEnergy",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-    "expression":"mbar * ( (eta1*eta1*eta1*eta1/4.0 - eta1*eta1/2.0) + (eta2*eta2*eta2*eta2/4.0 - eta2*eta2/2.0) + (eta3*eta3*eta3*eta3/4.0 - eta3*eta3/2.0) + 0.25 ) + mbar * ( gmm*(eta1*eta1*en2*en2 + eta2*eta2*en1*en1 - en1*en1*en2*en2) + gmb*(eta1*eta1*en3*en3 + eta3*eta3*en1*en1 - en1*en1*en3*en3) + gmb*(eta2*eta2*en3*en3 + eta3*eta3*en2*en2 - en2*en2*en3*en3) ) - 0.5*(muv*muv + mug*mug)/(Va*Va*k) + ( muv*(cvbeq - cvmeq) + mug*(cgbeq - cgmeq) )/Va * ( (eta1*eta1+eta2*eta2)*(en3*en3) - (eta3*eta3)*(en1*en1+en2*en2) ) / ( (en1*en1+en2*en2+en3*en3+eps)*(en1*en1+en2*en2+en3*en3+eps) ) - ( (en1*en1+en2*en2)*( muv*cvmeq + mug*cgmeq ) + (en3*en3)*( muv*cvbeq + mug*cgbeq ) ) / ( Va*(en1*en1+en2*en2+en3*en3+eps) )",
-    "constants":"(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(k:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
-    "variables":"eta(1..3)",
-    "explicit_variables":"en(1..3)",
-    "auxiliary_variables":"muv,mug",
-    "class_name":"FgFreeEnergySI",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "mbar * ( (eta1*eta1*eta1*eta1/4.0 - eta1*eta1/2.0) + (eta2*eta2*eta2*eta2/4.0 - eta2*eta2/2.0) + (eta3*eta3*eta3*eta3/4.0 - eta3*eta3/2.0) + 0.25 ) + mbar * ( gmm*(eta1*eta1*en2*en2 + eta2*eta2*en1*en1 - en1*en1*en2*en2) + gmb*(eta1*eta1*en3*en3 + eta3*eta3*en1*en1 - en1*en1*en3*en3) + gmb*(eta2*eta2*en3*en3 + eta3*eta3*en2*en2 - en2*en2*en3*en3) ) - 0.5*(muv*muv + mug*mug)/(Va*Va*k) + ( muv*(cvbeq - cvmeq) + mug*(cgbeq - cgmeq) )/Va * ( (eta1*eta1+eta2*eta2)*(en3*en3) - (eta3*eta3)*(en1*en1+en2*en2) ) / ( (en1*en1+en2*en2+en3*en3+eps)*(en1*en1+en2*en2+en3*en3+eps) ) - ( (en1*en1+en2*en2)*( muv*cvmeq + mug*cgmeq ) + (en3*en3)*( muv*cvbeq + mug*cgbeq ) ) / ( Va*(en1*en1+en2*en2+en3*en3+eps) )",
+        "constants": "(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(k:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
+        "variables": "eta(1..3)",
+        "explicit_variables": "en(1..3)",
+        "auxiliary_variables": "muv,mug",
+        "class_name": "FgFreeEnergySI",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-    "expression":"0.263671875*sdot(eta(1..3))",
-    "variables":"eta(1..3)",
-    "class_name":"FgGradEnergy",
-    "outputfile":"FissionGasCoefficients",
-    "gradient":true
+        "expression": "0.263671875*sdot(eta(1..3))",
+        "variables": "eta(1..3)",
+        "class_name": "FgGradEnergy",
+        "outputfile": "FissionGasCoefficients",
+        "gradient": true
     },
     {
-    "expression":"1.0/(Va*Va*k)",
-    "constants":"(Va:0.0409),(k:0.04015625)",
-    "variables":"mu",
-    "class_name":"FgSusceptibility",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "1.0/(Va*Va*k)",
+        "constants": "(Va:0.0409),(k:0.04015625)",
+        "variables": "mu",
+        "class_name": "FgSusceptibility",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-    "expression":"mu/(Va*Va*k) + ( ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cmeq + ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cbeq )/Va",
-    "constants":"(Va:0.0409),(k:0.04015625),(cmeq:2.507e-13),(cbeq:0.546),(eps:1.0e-12)",
-    "variables":"mu",
-    "auxiliary_variables":"eta(1..3)",
-    "class_name":"FgDensityVac",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "mu/(Va*Va*k) + ( ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cmeq + ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cbeq )/Va",
+        "constants": "(Va:0.0409),(k:0.04015625),(cmeq:2.507e-13),(cbeq:0.546),(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "class_name": "FgDensityVac",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-    "expression":"mu/(Va*Va*k) + ( ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cmeq + ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cbeq )/Va",
-    "constants":"(Va:0.0409),(k:0.04015625),(cmeq:2.507e-13),(cbeq:0.454),(eps:1.0e-12)",
-    "variables":"mu",
-    "auxiliary_variables":"eta(1..3)",
-    "class_name":"FgDensityGas",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "mu/(Va*Va*k) + ( ((eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cmeq + ((eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps))*cbeq )/Va",
+        "constants": "(Va:0.0409),(k:0.04015625),(cmeq:2.507e-13),(cbeq:0.454),(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "class_name": "FgDensityGas",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-    "expression":"(eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
-    "constants":"(eps:1.0e-12)",
-    "variables":"mu",
-    "auxiliary_variables":"eta(1..3)",
-    "class_name":"FgMatrixFraction",
-    "outputfile":"FissionGasCoefficients"
+        "expression": "(eta1*eta1+eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+        "constants": "(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "class_name": "FgMatrixFraction",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-     "expression":"(eta1*eta1)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
-    "variables":"eta(1..3)",
-     "constants":"(eps:1.0e-12)",
-     "class_name":"SwitchingFunctionBubble",
-     "outputfile":"FissionGasCoefficients"
+        "expression": "(eta1*eta1)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "constants": "(eps:1.0e-12)",
+        "class_name": "SwitchingFunctionGrain1",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-     "expression":"(eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
-    "variables":"eta(1..3)",
-     "constants":"(eps:1.0e-12)",
-     "class_name":"SwitchingFunctionGrain1",
-     "outputfile":"FissionGasCoefficients"
+        "expression": "(eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "constants": "(eps:1.0e-12)",
+        "class_name": "SwitchingFunctionGrain2",
+        "outputfile": "FissionGasCoefficients"
     },
     {
-     "expression":"(eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
-    "variables":"eta(1..3)",
-     "constants":"(eps:1.0e-12)",
-     "class_name":"SwitchingFunctionGrain2",
-     "outputfile":"FissionGasCoefficients"
+        "expression": "(eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..3)",
+        "constants": "(eps:1.0e-12)",
+        "class_name": "SwitchingFunctionBubble",
+        "outputfile": "FissionGasCoefficients"
     }
 ]
