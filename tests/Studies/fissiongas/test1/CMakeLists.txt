@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.4)
-execute_process(COMMAND python3 ${BUILD_SCRIPT_DIR}/generate_coefficients.py -r  -f  ${CMAKE_CURRENT_SOURCE_DIR}/coefficients.json
+execute_process(COMMAND python3 ${BUILD_SCRIPT_DIR}/GenerateCoefficient.py -r  -f  ${CMAKE_CURRENT_SOURCE_DIR}/coefficients.json
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CURRENT_EXE FissionGas2Dtest1)

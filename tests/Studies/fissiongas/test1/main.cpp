@@ -26,6 +26,26 @@
  * i.e. representative of normal LWR operation, so that the physical time needed to saturate the
  * grain boundary is of the order of 1e8 in these units.
  *
+ * Two departures from the parameters of the reference, both in FissionGasCoefficients.json:
+ *
+ *  - The parabolic free energies of the matrix and of the bubble phase share a single curvature k.
+ *    The susceptibility chi = 1/(Va^2 k) is then the same in both phases and drops out of the
+ *    interpolation between them (Eqs. 31-32 of the reference reduce to a constant), which makes the
+ *    chemical potential problems linear and removes the dependence of chi on the order parameters
+ *    from the partitioning term. The bubble curvature is unobservable in this model: the excess
+ *    density chi*mu inside a bubble is of the order of the supersaturation of the matrix, i.e.
+ *    negligible against c_b/Va, whatever k is.
+ *
+ *  - k is the matrix curvature of D.-U. Kim et al., Mater. Theory 6 (2022) 7, 2.57e9 J/m3, i.e.
+ *    0.04015625 in these units, instead of the 4.81e11 J/m3 of the reference. The curvature is a
+ *    numerical stiffness parameter, not a material property: it sets the chemical potential per
+ *    unit excess density, mu = drho / chi, hence the driving force on the interfaces for a given
+ *    supersaturation. With the curvature of the reference, the matrix loses metastability with
+ *    respect to the bubble phase (the Landau barrier m is overcome) at a vacancy excess of about
+ *    5e-4, a level reached in these calculations, and first on the grain boundary where the
+ *    barrier is lower. The softer curvature pushes that limit two orders of magnitude away and
+ *    relaxes the stability limit of the staggered coupling by the same factor.
+ *
  * Copyright CEA (c) 2026
  *
  */
@@ -47,10 +67,15 @@
 struct TestParameters {
   double control_initial_time = 0.;
   double control_final_time = 1.e6;
-  // Time step ramp: dt = dt_ratio * t, bounded by dt_min and dt_max.
+  // Time step ramp: dt = dt_ratio * t, bounded by dt_min and dt_max. The ceiling is set by the
+  // explicit coupling between the order parameters and the chemical potentials (see the note on
+  // the Coupling below): with the current parameters the estimate is chi dx / (L drho^2), about
+  // 8e3 tau* for dx = 10 nm and 4e3 for dx = 5 nm. Exceeding it shows up first at the tips of the
+  // bubbles on the boundary, where the interfaces move fastest, as a pocket of depleted matrix
+  // that pushes the bubble phase back.
   double control_dt_ratio = 1.e-2;
   double control_dt_min = 1.;
-  double control_dt_max = 1.e5;
+  double control_dt_max = 4.e3;
   // Number of bubbles on the grain boundary. The periodic cell is sized so that the linear density
   // of bubbles along the boundary is always the one of the reference, 1/l_GB = 4.46/um: reducing
   // this number gives a smaller cell of the same microstructure, not a different one.
@@ -78,20 +103,43 @@ struct TestParameters {
   // 2.e5 tau* for the radius and the diffusivity of the reference. Raising this factor reaches the
   // equilibrium shape in an affordable time without changing what that shape is.
   double control_diffusivity_factor = 1.;
+  // Scaling applied to the order parameter mobility. The reference set L so that the motion of the
+  // bubble surfaces is limited by diffusion, checking that a larger L leaves the microstructure
+  // unchanged. That check is tied to the curvature k of the parabolas, since the driving force on
+  // an interface at a given supersaturation is proportional to k: with the softer curvature used
+  // here it must be redone (run with 1 and with 10, compare the bubble area against time), and
+  // again whenever the diffusivity factor is changed.
+  double control_mobility_factor = 1.;
   // Initial radius of the bubbles. The reference uses 44 nm, which is only 1.5 times the width of
   // the diffuse interface: the region where the boundary meets the surface of a bubble is then as
   // large as the bubble itself, and the balance of the three interfacial energies that sets the
   // dihedral angle cannot be resolved. Raising it tests whether the angle is recovered once the
   // bubble is large compared with the interface.
   double control_bubble_radius = 44.;
-  // Size of the periodic cell along the boundary, per bubble. Defaults to l_GB of the reference.
+  // Size of the periodic cell along the boundary, per bubble. Defaults to l_GB of the reference,
+  // 1/sqrt(N_GB) with N_GB = 20/um2. A 44 nm bubble reshaped into a lens of semi-dihedral angle
+  // 50 deg at constant area spans about 140 nm along the boundary, so at 224 nm per bubble the
+  // matrix bridge between neighbours is under three interface widths from the start: this is a
+  // growth-and-coalescence cell, not a cell in which a single bubble is isolated. For the
+  // measurement of the equilibrium shape use one bubble with l_gb >= 600.
   double control_l_gb = 224.;
-  // Size of the domain across the boundary.
+  // Size of the domain across the boundary. The Neumann faces at x = 0 and x = lx are symmetry
+  // planes, so lx is the distance between two parallel boundaries, i.e. the grain size, and the
+  // gas produced in the half-grain on each side of the boundary ends up on it: the growth rate of
+  // the bubbles is proportional to lx. The default is the 0.6 um edge-to-edge distance of the
+  // hexagonal grains of the reference. The diffusion time across the half-grain, (lx/2)^2 / D,
+  // is 9e6 tau* at 600 nm, so the matrix is quasi-steady well before the boundary saturates; at
+  // realistic grain sizes (5 um, 6e8 tau*) it is not, and the matrix keeps most of the gas.
   double control_lx = 600.;
-  // Size of an element. The width of the diffuse interface is sqrt(8 kappa / m) = 30 nm, so the
-  // default of 10 nm puts only three elements across it, which is the bare minimum: the region
-  // where the boundary meets the surface of a bubble, where three interfaces meet, needs more.
-  double control_dx = 10.;
+  // Size of an element. The width of the diffuse interface is sqrt(8 kappa / m) = 30 nm. The
+  // reference uses 10 nm (three elements across the interface) as the finest level of an adaptive
+  // mesh; here the mesh is uniform and the region where the boundary meets the surface of a
+  // bubble, where three interfaces overlap within one interface width, is not resolved at 10 nm.
+  // 5 nm puts six elements across the interface and costs nothing in two dimensions (a 600 x 1120
+  // nm cell is 27e3 elements).
+  double control_dx = 5.;
+  double error_el_amr = 1e-4;
+  int max_level_amr = 3;
 };
 
 void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
@@ -116,6 +164,8 @@ void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "Maximum number of iterations of the nonlinear solvers.");
   args.AddOption(&p.control_diffusivity_factor, "-df", "--diffusivity_factor",
                  "Scaling applied to the diffusivity of both species.");
+  args.AddOption(&p.control_mobility_factor, "-lf", "--mobility_factor",
+                 "Scaling applied to the mobility of the order parameters.");
   args.AddOption(&p.control_bubble_radius, "-r", "--bubble_radius",
                  "Initial radius of the bubbles.");
   args.AddOption(&p.control_l_gb, "-lgb", "--l_gb", "Cell size along the boundary, per bubble.");
@@ -127,6 +177,9 @@ void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
                  "Time past which the time step drops to its minimum (0 disables).");
   args.AddOption(&p.control_newton_rtol, "-nrt", "--newton_rtol",
                  "Relative tolerance of the nonlinear solvers.");
+  args.AddOption(&p.error_el_amr, "-erm_amr", "--error_max_amr", "Max error for AMR");
+  args.AddOption(&p.max_level_amr, "-elm_amr", "--max_element_amr",
+                 "Max #elements for AMR subdvision");
 
   args.Parse();
 
@@ -209,9 +262,11 @@ int main(int argc, char* argv[]) {
   // ###########################################
   //            Physical models               //
   // ###########################################
-  // Non-dimensionalised model parameters (Table 1 of the reference)
+  // Non-dimensionalised model parameters (Table 1 of the reference). The curvature of the
+  // parabolas, k = 0.04015625, and the quantities derived from it (susceptibility chi = 1/(Va^2 k)
+  // = 1.49e4, equilibrium densities, grand potentials) live in FissionGasCoefficients.json.
   const double kappa = 0.52734375;                                  // (3/4) sigma_mm l_int
-  const double mobility_value = 0.1;                                // order parameter mobility
+  const double mobility_value = 0.1 * p.control_mobility_factor;    // L = 1.56e-11 m3/(J s)
   const double diffusivity = 1.e-2 * p.control_diffusivity_factor;  // D_g = D_v = 0.1 nm2/s
   const double source_gas = 2.35e-10 * p.control_source_factor;     // s_g^0 = 2.35e12 at/(cm3 s)
   const double source_vac = 2.35e-9 * p.control_source_factor;      // s_v^0 = 10 s_g^0
@@ -248,14 +303,18 @@ int main(int argc, char* argv[]) {
   Coefficients op_coef(op_energy, op_capillary, op_mobility, op_grad_energy);
 
   // Vacancies. The susceptibility plays the role of the heat capacity, and the product of the
-  // diffusion coefficient by the susceptibility that of the thermal conductivity.
+  // diffusion coefficient by the susceptibility that of the thermal conductivity. Both are
+  // constants (single curvature, see the header), so the chemical potential problems are linear in
+  // mu: the source term depends on the order parameters only and the partitioning term is
+  // explicit. Their Newton solvers must converge in one iteration; a second one means something is
+  // being evaluated at mu^{n+1} that should not be.
   Coefficient muv_unit(Glossary::Concentration, 1.0);
   Coefficient muv_chi(Glossary::Cp, Scheme::Implicit, FgSusceptibility());
   Coefficient muv_cond(Glossary::Conductivity, Scheme::Implicit, FgSusceptibility(diffusivity));
   // The density is evaluated explicitly, i.e. at the previous value of the chemical potential.
   // Summing the residual over the domain then telescopes exactly to rho^{n+1} - rho^n, so the
-  // scheme conserves the species exactly. Evaluating it implicitly would leave a defect
-  // (chi^{n+1} - chi^n)(mu^{n+1} - mu^n) per time step.
+  // scheme conserves the species exactly. With a constant chi this holds whatever eta the time
+  // derivative evaluates chi at; with an interpolated chi it would require chi at eta^{n+1}.
   Coefficient muv_density(Glossary::DefectDensity, Scheme::Explicit, FgDensityVac());
   Coefficient muv_source(Glossary::Source, Scheme::Implicit, FgMatrixFraction(source_vac));
   // Declared as a free energy only so that the energy post-processing integrates it over the
@@ -359,9 +418,11 @@ int main(int argc, char* argv[]) {
   // 0.5: a threshold would follow the reshaping of the diffuse profile rather than the amount of
   // bubble phase, which is what the conservation of the species has to be compared with.
   std::map<std::string, std::tuple<double, double>> bubble_integral = {{"eta_b0", {-1.1, 1.1}}};
-  // Wide bounds, so that the integral and the average are taken over the whole domain. In the
-  // matrix and before any transport takes place, mu = s^0 t / chi_m, which is an analytical check
-  // of the production term and of the susceptibility.
+  // Wide bounds, so that the integral and the average are taken over the whole domain. Before any
+  // transport takes place (-df 0), mu = s^0 t / chi in the whole matrix, with chi = 1.49e4 the
+  // same everywhere since it no longer depends on the phase: an analytical check of the production
+  // term and of the susceptibility. The bubble interior must stay at mu = 0 until the partitioning
+  // term reaches it. Note the scale of mu with the soft curvature: mu_v = 1.6e-7 at t = 1e6.
   std::map<std::string, std::tuple<double, double>> muv_integral = {{"mu_v", {-1.e30, 1.e30}}};
   std::map<std::string, std::tuple<double, double>> mug_integral = {{"mu_g", {-1.e30, 1.e30}}};
   std::map<std::string, std::tuple<double, double>> var_integral = {
@@ -426,7 +487,8 @@ int main(int argc, char* argv[]) {
 
   MultiVariableMaxAMR<VARS> amr_ac(*spatial.get_mesh(), spatial.is_nc_simplices());
 
-  auto amr_params = Parameters(Parameter("max_elem_error", 1.e-4), Parameter("amr_max_level", 3),
+  auto amr_params = Parameters(Parameter("max_elem_error", p.error_el_amr),
+                               Parameter("amr_max_level", p.max_level_amr),
                                Parameter("nc_limit", 0), Parameter("max_preref_cycles", 3));
 
   amr_ac.SetCriteria(/*estimator*/ &estimator_ac, amr_params);
@@ -439,7 +501,17 @@ int main(int argc, char* argv[]) {
   // the Allen-Cahn equations is the difference of grand potential between the phases, which depends
   // on the chemical potentials, and the motion of the interfaces feeds the conservation equations
   // through the partitioning term. The problems are staggered once per time step, which leaves that
-  // coupling explicit and stable below a time step of the order of chi dx / (L drho^2).
+  // coupling explicit and stable below a time step of the order of chi dx / (L drho^2), where
+  // drho = dc^eq / Va = 13 nm^-3 is the density jump across the bubble surface: 8e3 tau* for
+  // dx = 10 nm and 4e3 for 5 nm with chi = 1.49e4 (45 and 22 tau* with the curvature of the
+  // reference). The mechanism, when the step is too large: an interface that advances by delta
+  // absorbs drho * delta from a diffusion layer of thickness sqrt(D dt), the chemical potential
+  // there drops by drho * delta / (chi sqrt(D dt)), the grand potential difference changes sign and
+  // pushes the interface back, and the next step undoes it. The reference does not have this
+  // limit because MOOSE solves the order parameters and the chemical potentials monolithically.
+  // Sweeping the three problems twice per step (Gauss-Seidel) would roughly square the limit at
+  // twice the cost per step, which is worth doing if steps above 1e4 tau* are needed to reach the
+  // saturation of the boundary.
 
   // ###########################################
   //            Time-integration              //
