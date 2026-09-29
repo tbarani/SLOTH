@@ -53,5 +53,26 @@
     "auxiliary_variables":"eta(1..3)",
     "class_name":"FgMatrixFraction",
     "outputfile":"FissionGasCoefficients"
+    },
+    {
+     "expression":"(eta1*eta1)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+    "variables":"eta(1..3)",
+     "constants":"(eps:1.0e-12)",
+     "class_name":"SwitchingFunctionBubble",
+     "outputfile":"FissionGasCoefficients"
+    },
+    {
+     "expression":"(eta2*eta2)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+    "variables":"eta(1..3)",
+     "constants":"(eps:1.0e-12)",
+     "class_name":"SwitchingFunctionGrain1",
+     "outputfile":"FissionGasCoefficients"
+    },
+    {
+     "expression":"(eta3*eta3)/(eta1*eta1+eta2*eta2+eta3*eta3+eps)",
+    "variables":"eta(1..3)",
+     "constants":"(eps:1.0e-12)",
+     "class_name":"SwitchingFunctionGrain2",
+     "outputfile":"FissionGasCoefficients"
     }
 ]

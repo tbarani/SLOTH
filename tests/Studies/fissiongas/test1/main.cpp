@@ -61,6 +61,9 @@
 
 #include "./FissionGasCoefficients.hpp"
 #include "AnalyticalFunctions/AnalyticalFunctions.hpp"
+#include "Coefficients/Coefficient.hpp"
+#include "Glossary/Glossary.hpp"
+#include "Options/TimeOptions.hpp"
 #include "Sloth/sloth.hpp"
 #include "Sloth/tests.hpp"
 
@@ -332,6 +335,13 @@ int main(int argc, char* argv[]) {
   Coefficient mug_total(Glossary::FreeEnergy, Scheme::Implicit, FgDensityGas());
   Coefficients mug_coef(mug_unit, mug_chi, mug_cond, mug_density, mug_source, mug_total);
 
+  // post processing
+  Coefficient switch_bbl(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionBubble());
+  switch_bbl.set_name("h_b");
+  Coefficient switch_gr1(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionGrain1());
+  switch_gr1.set_name("h_g1");
+  Coefficient switch_gr2(Glossary::PhaseField, Scheme::Explicit, SwitchingFunctionGrain2());
+  switch_gr2.set_name("h_g2");
   // ####################
   //     variables     //
   // ####################
@@ -478,6 +488,7 @@ int main(int argc, char* argv[]) {
            mug_vars);
   PB muv_pb("MuVac", muv_oper, muv_vars, {muv_coef}, v_pst, op_vars);
   PB mug_pb("MuGas", mug_oper, mug_vars, {mug_coef}, v_pst, op_vars);
+
   // AMR
   /////////////////////////////////
   ///  AC
@@ -493,25 +504,11 @@ int main(int argc, char* argv[]) {
 
   amr_ac.SetCriteria(/*estimator*/ &estimator_ac, amr_params);
   op_pb.set_amr(&amr_ac);
+  op_pb.set_vtk_coefficients({switch_bbl, switch_gr1, switch_gr2});
   /////////////////////////////////
   // AMR
   auto cc = Coupling("Intergranular fission gas bubbles", op_pb, muv_pb, mug_pb);
 
-  // The order parameters and the chemical potentials are coupled both ways: the driving force of
-  // the Allen-Cahn equations is the difference of grand potential between the phases, which depends
-  // on the chemical potentials, and the motion of the interfaces feeds the conservation equations
-  // through the partitioning term. The problems are staggered once per time step, which leaves that
-  // coupling explicit and stable below a time step of the order of chi dx / (L drho^2), where
-  // drho = dc^eq / Va = 13 nm^-3 is the density jump across the bubble surface: 8e3 tau* for
-  // dx = 10 nm and 4e3 for 5 nm with chi = 1.49e4 (45 and 22 tau* with the curvature of the
-  // reference). The mechanism, when the step is too large: an interface that advances by delta
-  // absorbs drho * delta from a diffusion layer of thickness sqrt(D dt), the chemical potential
-  // there drops by drho * delta / (chi sqrt(D dt)), the grand potential difference changes sign and
-  // pushes the interface back, and the next step undoes it. The reference does not have this
-  // limit because MOOSE solves the order parameters and the chemical potentials monolithically.
-  // Sweeping the three problems twice per step (Gauss-Seidel) would roughly square the limit at
-  // twice the cost per step, which is worth doing if steps above 1e4 tau* are needed to reach the
-  // saturation of the boundary.
 
   // ###########################################
   //            Time-integration              //
