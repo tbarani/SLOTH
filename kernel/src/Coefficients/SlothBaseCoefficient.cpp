@@ -37,6 +37,7 @@
 
 #include "Coefficients/ConstantCoefficient.hpp"
 #include "Coefficients/FunctionCoefficient.hpp"
+#include "Coefficients/MultiscaleCoefficient.hpp"
 #include "Glossary/Glossary.hpp"
 #include "Options/TimeOptions.hpp"
 #include "mfem.hpp"  // NOLINT [no include the directory when naming mfem include file]
@@ -342,6 +343,29 @@ bool SlothBaseCoefficient::is_semi_implicit() const {
  *         false otherwise.
  */
 bool SlothBaseCoefficient::is_scalar() const { return this->scheme_ == Scheme::Constant; }
+
+/**
+ * @brief Returns the multiscale provider behind this coefficient, or nullptr.
+ *
+ * @remark Non-virtual by design: see the header. The multiscale state lives
+ * in the shared FunctionCoefficient because this class is copied by value and
+ * the copies would slice a derived subclass.
+ *
+ * @return Pointer to the MultiscaleCoefficient, or nullptr for an ordinary
+ *         analytical/constant coefficient.
+ */
+MultiscaleCoefficient* SlothBaseCoefficient::as_multiscale() const {
+  return dynamic_cast<MultiscaleCoefficient*>(this->coefficient_.get());
+}
+
+/**
+ * @brief Returns the underlying FunctionCoefficient.
+ *
+ * @return The shared coefficient implementation.
+ */
+std::shared_ptr<FunctionCoefficient> SlothBaseCoefficient::get_function_coefficient() const {
+  return this->coefficient_;
+}
 
 /**
  * @brief Update the time associated with the coefficient

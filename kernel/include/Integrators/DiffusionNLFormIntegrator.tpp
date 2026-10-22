@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "Coefficients/AxiCylindricalCoefficient.hpp"
+#include "Coefficients/MultiscaleCoefficient.hpp"
 #include "Coefficients/SlothBaseCoefficient.hpp"
 #include "Integrators/SlothNLFormIntegrator.hpp"
 #include "Parameters/Parameter.hpp"
@@ -155,8 +156,17 @@ void DiffusionNLFormIntegrator<VARS>::AssembleElementVector(
 
       el[blk]->CalcPhysDShape(Tr, gradPsi);
       gradPsi.MultTranspose(*elfun[blk], gradU);
-      double diffu = this->compute_coefficient(diffusion[blk], std::span<const double>(u_values),
-                                               std::span<const double>(vaux_gf_at_ip));
+      double diffu = 0.;
+      if (const MultiscaleCoefficient* multiscale = diffusion[blk].as_multiscale()) {
+        // R2 (docs/DESIGN_SLOTH_COUPLING.md 3.6): the multiscale provider is a
+        // lookup by element index into the manager's frozen table. Going
+        // through compute_coefficient would abort by design (the state spans
+        // carry no element identity).
+        diffu = multiscale->eval_at(Tr);
+      } else {
+        diffu = this->compute_coefficient(diffusion[blk], std::span<const double>(u_values),
+                                          std::span<const double>(vaux_gf_at_ip));
+      }
 
       double weight_coef = ip.weight * Tr.Weight();
       if (this->isAxisymmetric()) {
@@ -227,11 +237,26 @@ void DiffusionNLFormIntegrator<VARS>::AssembleElementGrad(
         u_values[off_blk + num_blocks] = this->u_old_[off_blk].GetValue(Tr, ip);
       }
 
-      double diffu = this->compute_coefficient(diffusion[blk], std::span<const double>(u_values),
+      double diffu = 0.;
+      double grad_diffu = 0.;
+      if (const MultiscaleCoefficient* multiscale = diffusion[blk].as_multiscale()) {
+        // R2 (docs/DESIGN_SLOTH_COUPLING.md 3.6): lookup by element index, as
+        // at the residual call site above.
+        diffu = multiscale->eval_at(Tr);
+        // The table is frozen over the macro step, so lambda* is NOT a
+        // function of the macro unknown and its derivative is identically
+        // zero. Pinned here, never asked from the coefficient (whose
+        // GradientF() aborts): with grad_diffu = 0 the staggered Newton
+        // tangent is exactly the existing one.
+        grad_diffu = 0.;
+      } else {
+        diffu = this->compute_coefficient(diffusion[blk], std::span<const double>(u_values),
+                                          std::span<const double>(vaux_gf_at_ip));
+        grad_diffu =
+            this->compute_gradient_coefficient(diffusion[blk], blk,
+                                               std::span<const double>(u_values),
                                                std::span<const double>(vaux_gf_at_ip));
-      double grad_diffu =
-          this->compute_gradient_coefficient(diffusion[blk], blk, std::span<const double>(u_values),
-                                             std::span<const double>(vaux_gf_at_ip));
+      }
 
       el[blk]->CalcPhysDShape(Tr, gradPsi);
 
