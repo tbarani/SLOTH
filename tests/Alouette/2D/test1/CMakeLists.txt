@@ -16,9 +16,7 @@
 # not apply transitively to a dependency's dependencies: the executable's rpath
 # is what resolves libhwloc for libmpi, so these directories are load-bearing.
 set(ALOUETTE_MPI_CLOSURE_LIBRARY_DIRS
-    "/home/tommy/projects/sloth_trials/spack/opt/spack/linux-skylake/openmpi-5.0.10-5yylz57e4m2v3is77jl2z6ixvuo53jxu/lib"
-    "/home/tommy/projects/sloth_trials/spack/opt/spack/linux-skylake/libevent-2.1.12-kw5fcnw3as7bpvwxggfbtit6ln2mfrts/lib"
-    "/home/tommy/projects/sloth_trials/spack/opt/spack/linux-skylake/hwloc-2.9.3-ddcd7hl3r2zngt3izyd7r67ou3h2hvzg/lib"
+    ""
     CACHE STRING "Extra rpath directories for the coupling view's MPI closure")
 
 add_executable(Alouette2Dtest1 main.cpp)

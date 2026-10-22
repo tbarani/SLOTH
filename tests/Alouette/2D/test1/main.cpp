@@ -241,11 +241,12 @@ int main(int argc, char* argv[]) {
   const auto& cp(10.);
   Coefficient density(Glossary::Concentration, rho);
   Coefficient heat_capacity(Glossary::Cp, cp);
-  // Scheme::Explicit on purpose: a coefficient that must see the element is
-  // never evaluable through the state-only `compute()` path, and Explicit
-  // routes a missed branch to `FunctionCoefficient::F()` (which aborts) rather
-  // than to a silently wrong scalar. The integrator's two conductivity call
-  // sites branch to `eval_at(Tr)` through `as_multiscale()`.
+  // Scheme::Explicit records that no constant scalar stands for this
+  // coefficient. The guarantee against a missed branch is NOT the scheme: it is
+  // MultiscaleCoefficient's own evaluators, which refuse in ANY scheme, because
+  // every state-only path ends in F()/GradientF()/HessianF(). The integrator's
+  // two conductivity call sites branch to `eval_at(Tr)` through
+  // `as_multiscale()`.
   Coefficient conductivity(Glossary::Conductivity, Scheme::Explicit, multiscale_coefficient);
 
   // ############################
