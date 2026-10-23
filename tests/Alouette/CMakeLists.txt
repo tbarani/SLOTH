@@ -25,6 +25,13 @@ set(ALOUETTE_COUPLING_LIBRARY
 set(ALOUETTE_MPI_LIBRARY_DIR
     ""
     CACHE PATH "Directory of the libmpi.so the coupled executable must use")
+# The S1 offline chain's other half. It is a SEPARATE program on purpose (the
+# offline variant), so it is a path to an executable, not a library: the chain
+# gate runs it as a child process and the two sides never share a runtime. It
+# may come from any alouette build tree, and typically the native one.
+set(ALOUETTE_OFFLINE_BATCH
+    ""
+    CACHE FILEPATH "The alouette_offline_batch executable the S1 chain invokes")
 
 if(SLOTH_BUILD_ALOUETTE_TESTS
    AND EXISTS "${ALOUETTE_COUPLING_INCLUDE_DIR}/alouette/coupling/alouette_micro.h"
@@ -36,6 +43,16 @@ if(SLOTH_BUILD_ALOUETTE_TESTS
     message(FATAL_ERROR
             "SLOTH_BUILD_ALOUETTE_TESTS=ON requires ALOUETTE_MPI_LIBRARY_DIR: the coupled "
             "executable must bind to the same MPI runtime as libalouette_core.so.")
+  endif()
+  # The S1 chain gate (`t.layered_macro`) cannot run without the batch, and a
+  # gate that silently disappears when a path is unset is worse than a hard
+  # refusal: it reads as green. The variable is REQUIRED by the family, not
+  # optional per test.
+  if(NOT ALOUETTE_OFFLINE_BATCH)
+    message(FATAL_ERROR
+            "SLOTH_BUILD_ALOUETTE_TESTS=ON requires ALOUETTE_OFFLINE_BATCH: the S1 offline chain "
+            "gate (t.layered_macro) runs it as a child process. Point it at an alouette build "
+            "tree's src/alouette_offline_batch.")
   endif()
   message(STATUS "SLOTH/Alouette coupling tests: ENABLED")
   add_subdirectory(2D)
