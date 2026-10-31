@@ -93,38 +93,40 @@ def build(nb_grains, prm):
                          "serves both species")
 
     nb_ops = nb_grains + 1
-    grains = [f"eta{i}" for i in range(1, nb_grains + 1)]
-    bubble = f"eta{nb_ops}"
-    all_ops = grains + [bubble]
-    en_grains = [f"en{i}" for i in range(1, nb_grains + 1)]
-    en_bubble = f"en{nb_ops}"
-    en_all = en_grains + [en_bubble]
+    N, B = nb_grains, nb_ops
+    # The bubble order parameter is eta[B]; inside Sum(...) terms a literal index eta[B] is
+    # fine (the Sum machinery turns eta[k] into etak after expansion).
+    bubble = f"eta[{B}]"
+    en_bubble = f"en[{B}]"
 
-    def ssum(names):
-        return " + ".join(sq(v) for v in names)
+    # Compact Sum(...) expressions (expanded by sympy at generation time), so that the json does
+    # not grow with the number of grains, cf. tests/Studies/multigrains. s2(a, n) is
+    # Sum(a[i]^2, (i, 1, n)).
+    def s2(a, n):
+        return f"Sum({a}[i]*{a}[i], (i, 1, {n}))"
 
-    def sum_squares_plus_eps(names):
-        return f"({ssum(names)}+eps)"
+    def s4(a, n):
+        return f"Sum({a}[i]*{a}[i]*{a}[i]*{a}[i], (i, 1, {n}))"
 
-    # Multi-well term, sum_i (eta_i^4 / 4 - eta_i^2 / 2). The 0.25 added below lifts the minima
-    # to zero.
-    wells = " + ".join(f"({v}*{v}*{v}*{v}/4.0 - {v}*{v}/2.0)" for v in all_ops)
-    # Cross terms, gamma_ij eta_i^2 eta_j^2 over unordered pairs. Eq. 1 writes gamma/2 over ordered
-    # pairs, which is the same sum.
-    cross_mm = " + ".join(f"{sq(grains[i])}*{sq(grains[j])}"
-                          for i in range(nb_grains) for j in range(i + 1, nb_grains))
-    cross_mb = " + ".join(f"{sq(g)}*{sq(bubble)}" for g in grains)
-    cross = ""
-    if cross_mm:
-        cross += f" + gmm*({cross_mm})"
-    cross += f" + gmb*({cross_mb})"
+    def ss(a, b, n):
+        return f"Sum(({a}[i]*{a}[i])*({b}[j]*{b}[j]), (i, 1, {n}), (j, 1, {n}))"
 
-    h_m = f"(({ssum(grains)})/{sum_squares_plus_eps(all_ops)})"
-    h_b = f"(({sq(bubble)})/{sum_squares_plus_eps(all_ops)})"
+    # Multi-well term, sum_i (eta_i^4 / 4 - eta_i^2 / 2) over all order parameters. The 0.25 added
+    # below lifts the minima to zero.
+    wells = f"Sum(eta[i]*eta[i]*eta[i]*eta[i]/4.0 - eta[i]*eta[i]/2.0, (i, 1, {B}))"
+    # Cross terms, gamma_ij eta_i^2 eta_j^2 over unordered pairs. Eq. 1 writes gamma/2 over
+    # ordered pairs, which is the same sum: sum_{i<j} = (sum_{i,j} - sum_i eta_i^4) / 2.
+    cross_mm = (f"0.5*gmm*( {ss('eta', 'eta', N)} - {s4('eta', N)} )" if nb_grains > 1 else "")
+    cross_mb = f"gmb*{bubble}*{bubble}*{s2('eta', N)}"
+    cross = " + ".join(p for p in (cross_mm, cross_mb) if p)
+
+    den = f"({s2('eta', B)}+eps)"
+    h_m = f"({s2('eta', N)})/{den}"
+    h_b = f"({bubble}*{bubble})/{den}"
     omega_m = omega("kvm", "kgm", "cvmeq", "cgmeq")
     omega_b = omega("kvb", "kgb", "cvbeq", "cgbeq")
 
-    fi = (f"mbar * ( {wells}{cross} + 0.25 )"
+    fi = (f"mbar * ( {wells} + {cross} + 0.25 )"
           f" + {h_m} * ( {omega_m} )"
           f" + {h_b} * ( {omega_b} )")
 
@@ -134,23 +136,22 @@ def build(nb_grains, prm):
     # the physical eta_i^2 eta_j^2. The interpolated grand potential is expanded to first order
     # around eta^n. Only the numerators of the switching functions see the new time; the
     # denominators stay at eta^n.
-    def split(a, b, an, bn):
-        return f"{sq(a)}*{sq(bn)} + {sq(b)}*{sq(an)} - {sq(an)}*{sq(bn)}"
-
-    si_mm = " + ".join(split(grains[i], grains[j], en_grains[i], en_grains[j])
-                       for i in range(nb_grains) for j in range(i + 1, nb_grains))
-    si_mb = " + ".join(split(g, bubble, gn, en_bubble) for g, gn in zip(grains, en_grains))
-    si_cross = ""
-    if si_mm:
-        si_cross += f"gmm*({si_mm}) + "
-    si_cross += f"gmb*({si_mb})"
-    s_en = sum_squares_plus_eps(en_all)
+    #   split(eta_i, eta_j) over i<j =
+    #       Sum_{i,j} eta_i^2 en_j^2 - Sum_i eta_i^2 en_i^2   (the i != j part of the double sum)
+    #     - 0.5*(Sum_{i,j} en_i^2 en_j^2 - Sum_i en_i^4)     (the unordered explicit pairs)
+    si_mm = (f"{ss('eta', 'en', N)} - Sum(eta[i]*eta[i]*en[i]*en[i], (i, 1, {N}))"
+             f" - 0.5*( {ss('en', 'en', N)} - {s4('en', N)} )") if nb_grains > 1 else ""
+    si_mb = (f"{en_bubble}*{en_bubble}*{s2('eta', N)} + {bubble}*{bubble}*{s2('en', N)}"
+             f" - {en_bubble}*{en_bubble}*{s2('en', N)}")
+    si_cross = " + ".join(p for p in ((f"gmm*({si_mm})" if si_mm else ""), f"gmb*({si_mb})") if p)
+    s_en = f"({s2('en', B)}+eps)"
     si = (f"mbar * ( {wells} + 0.25 )"
           f" + mbar * ( {si_cross} )"
           f" + ( ( {omega_m} ) - ( {omega_b} ) )"
-          f" * ( ({ssum(grains)})*({sq(en_bubble)}) - ({sq(bubble)})*({ssum(en_grains)}) )"
+          f" * ( ({s2('eta', N)})*({en_bubble}*{en_bubble})"
+          f"      - ({bubble}*{bubble})*({s2('en', N)}) )"
           f" / ( {s_en}*{s_en} )"
-          f" + ( ({ssum(en_grains)})*( {omega_m} ) + ({sq(en_bubble)})*( {omega_b} ) ) / {s_en}")
+          f" + ( ({s2('en', N)})*( {omega_m} ) + ({en_bubble}*{en_bubble})*( {omega_b} ) ) / {s_en}")
 
     chi = f"{h_m}/(Va*Va*km) + {h_b}/(Va*Va*kb)"
 
@@ -223,6 +224,14 @@ def build(nb_grains, prm):
             "variables": "mu",
             "auxiliary_variables": eta_range,
             "class_name": "FgMatrixFraction",
+            "outputfile": output_file,
+        },
+        {
+            "expression": h_b,
+            "constants": constants(["eps"], prm),
+            "variables": "mu",
+            "auxiliary_variables": eta_range,
+            "class_name": "SwitchingFunctionBubble",
             "outputfile": output_file,
         },
     ]
