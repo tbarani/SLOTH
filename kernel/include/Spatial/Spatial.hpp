@@ -273,6 +273,11 @@ class SpatialDiscretization {
     this->dimension_ = existing_mesh->Dimension();
     this->mesh_max_bdr_attributes_ =
         existing_mesh->bdr_attributes.Size() ? existing_mesh->bdr_attributes.Max() : 0;
+    // Share the attribute sets of the owning mesh, so that variables built on this
+    // discretization can use attribute-based initial conditions (e.g. one phase field per
+    // physical group of a gmsh mesh).
+    this->elem_attr_sets_ = std::make_shared<mfem::AttributeSets>(existing_mesh->attribute_sets);
+    this->bdr_attr_sets_ = std::make_shared<mfem::AttributeSets>(existing_mesh->bdr_attribute_sets);
     this->set_finite_element_space();
   }
 

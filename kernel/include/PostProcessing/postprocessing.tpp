@@ -237,12 +237,14 @@ template <class T, class DC, int DIM>
 std::map<std::string, mfem::ParGridFunction*> PostProcessing<T, DC, DIM>::project_coefficients(
     std::vector<Coefficient>& coeffs, Variables<T, DIM>& vars,
     std::vector<Variables<T, DIM>*> vect_aux_var) {
-  // Auxiliary variables
+  // Auxiliary variables, in declaration order (getVariables()), not name order: the
+  // coefficients index the auxiliary vector positionally (aux[0] = first aux variable), so a
+  // name-sorted map would silently permute the fields when the variable names do not sort in
+  // declaration order (e.g. "eta_b" before "eta_g1").
   std::vector<mfem::ParGridFunction> vaux_gf;
   for (const auto& auxvar_vec : vect_aux_var) {
-    std::map<std::string, mfem::ParGridFunction*> map_aux_var = auxvar_vec->get_map_gridfunction();
-    for (const auto& [aux_name, vgf] : map_aux_var) {
-      vaux_gf.emplace_back(*vgf);
+    for (const auto& auxvar : auxvar_vec->getVariables()) {
+      vaux_gf.emplace_back(auxvar.get_gf());
     }
   }
 
