@@ -115,6 +115,9 @@ struct TestParameters {
   double control_lx = 1039.2304845413264;
   double control_ly = 1200.;
   double control_lz = 280.;
+  // Honeycomb layout of the mesh: "center" (one grain centered in the box, Fig. 3 of the paper)
+  // or "corner". Must match the --layout used to generate the mesh.
+  std::string control_layout = "center";
 };
 
 void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
@@ -163,6 +166,8 @@ void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
   args.AddOption(&p.control_lx, "-lx", "--box_lx", "Box size in x (periodic images of the bubbles).");
   args.AddOption(&p.control_ly, "-ly", "--box_ly", "Box size in y (periodic images of the bubbles).");
   args.AddOption(&p.control_lz, "-lz", "--box_lz", "Box size in z (periodic images of the bubbles).");
+  args.AddOption(&p.control_layout, "-layout", "--layout",
+                 "Honeycomb layout of the mesh: center or corner (bubble placement).");
 
   args.Parse();
 
@@ -177,10 +182,13 @@ void common_parameters(mfem::OptionsParser& args, TestParameters& p) {
 
 /// Geometry of the ideal honeycomb (used for the initial bubbles, so that they lie exactly on
 /// the grain faces and grain edges regardless of the mesh): the periodic cell holds four
-/// hexagons of circumradius a = Lx/3 centered at (0,0), (3a/2, sqrt(3)a/2), (0, sqrt(3)a) and
-/// (3a/2, 3 sqrt(3)a/2). The grain faces are the 24 hexagon edges (each shared by two hexagons,
-/// so every face is counted twice - the random placement over the 24 is still uniform), the
-/// grain edges (triple lines) are the 8 unique hexagon vertices.
+/// hexagons of circumradius a = Lx/3. With layout "center" (Fig. 3 of the paper) the centers
+/// are (3a/2, sqrt(3)a), (0, 3 sqrt(3)a/2), (3a/2, 0), (0, sqrt(3)a/2): one full grain in the
+/// middle of the box, the other three split in half by the periodic boundaries. With layout
+/// "corner" the lattice origin is on a hexagon center instead. The grain faces are the 24
+/// hexagon edges (each shared by two hexagons, so every face is counted twice - the random
+/// placement over the 24 is still uniform), the grain edges (triple lines) are the 8 unique
+/// hexagon vertices.
 struct Honeycomb {
   std::array<std::array<double, 2>, 4> centers;
   std::array<std::array<std::array<double, 2>, 2>, 24> face_edges;  // (p, q) per hexagon edge
@@ -188,14 +196,21 @@ struct Honeycomb {
   double a;  // hexagon circumradius = edge length
 };
 
-Honeycomb honeycomb(double lx, double ly) {
+Honeycomb honeycomb(double lx, double ly, bool centered) {
   Honeycomb h{};
   h.a = lx / 3.;
   const double s3 = std::sqrt(3.);
-  h.centers = {{{0., 0.},
-                {1.5 * h.a, 0.5 * s3 * h.a},
-                {0., s3 * h.a},
-                {1.5 * h.a, 1.5 * s3 * h.a}}};
+  if (centered) {
+    h.centers = {{{1.5 * h.a, s3 * h.a},
+                  {0., 1.5 * s3 * h.a},
+                  {1.5 * h.a, 0.},
+                  {0., 0.5 * s3 * h.a}}};
+  } else {
+    h.centers = {{{0., 0.},
+                  {1.5 * h.a, 0.5 * s3 * h.a},
+                  {0., s3 * h.a},
+                  {1.5 * h.a, 1.5 * s3 * h.a}}};
+  }
   int ne = 0;
   std::map<std::pair<long, long>, std::array<double, 2>> verts;
   for (const auto& c : h.centers) {
@@ -342,7 +357,7 @@ int main(int argc, char* argv[]) {
   const double Lx = p.control_lx;
   const double Ly = p.control_ly;
   const double Lz = p.control_lz;
-  const Honeycomb hc = honeycomb(Lx, Ly);
+  const Honeycomb hc = honeycomb(Lx, Ly, p.control_layout == "center");
   std::vector<std::pair<std::array<double, 3>, double>> bubbles;  // (center, radius)
   // triple-line bubbles: evenly spaced along each of the 8 vertical triple lines
   for (const auto& xy : hc.triple_lines) {

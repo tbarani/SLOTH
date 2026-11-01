@@ -55,6 +55,8 @@ def main():
     ap.add_argument("--in", dest="inp", default="hex_raw.msh")
     ap.add_argument("--out", default="hex.msh")
     ap.add_argument("--a", type=float, default=80.0, help="hexagon circumradius in nm")
+    ap.add_argument("--layout", choices=["corner", "center"], default="center",
+                    help="honeycomb layout, must match make_hex_geo.py")
     args = ap.parse_args()
 
     a = args.a
@@ -72,10 +74,12 @@ def main():
     assert tets_raw, "no tetrahedra in the raw mesh"
 
     # ---- grain lookup: nearest hexagon center (honeycomb = Voronoi diagram of the centers)
+    off = (3, 2) if args.layout == "center" else (0, 0)
     centers = []
     for i in range(-3, 4):
         for j in range(-3, 4):
-            cx, cy = 3 * i * a / 2, (2 * j + i % 2) * math.sqrt(3) * a / 2
+            cm, cn = off[0] + 3 * i, off[1] + 2 * j + i % 2
+            cx, cy = cm * a / 2, cn * math.sqrt(3) * a / 2
             centers.append((cx, cy, (i % 2) + 2 * (j % 2) + 1))
 
     def grain_of(x, y):

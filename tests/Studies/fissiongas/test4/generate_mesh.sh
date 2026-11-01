@@ -16,6 +16,6 @@
 # The committed hex.msh is the output of this script, pinned by the parameters below.
 set -e
 cd "$(dirname "$0")"
-python3 make_hex_geo.py --a 346.4101615137755 --lc 40 --lz 280 --nz 7 --out hex3d.geo
+python3 make_hex_geo.py --a 346.4101615137755 --lc 40 --layout center --lz 280 --nz 7 --out hex3d.geo
 gmsh hex3d.geo -3 -format msh2 -setnumber Mesh.SaveAll 1 -o hex_raw.msh
-python3 finalize_mesh.py --in hex_raw.msh --out hex.msh --a 346.4101615137755
+python3 finalize_mesh.py --in hex_raw.msh --out hex.msh --a 346.4101615137755 --layout center

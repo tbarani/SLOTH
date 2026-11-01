@@ -42,8 +42,13 @@ output):
    tile the box exactly; opposite box edges carry identical line segments paired by
    `Periodic Line`, and the cell is extruded in z with `Extrude {0,0,Lz} { Surface{:};
    Layers{nz}; }`. Committed cell: a = 346.41 nm (d = 0.6 um), Lz = 280 nm, nz = 7 layers,
-   lc = 40 nm base mesh (~41.5k tets, 6923 nodes after periodic merging). Production runs use
+   lc = 40 nm base mesh (~41k tets, ~6.9k nodes after periodic merging). Production runs use
    `-amr -elm_amr 2` to reach the paper's ~10 nm element size at the interfaces.
+
+   Two layouts (`--layout`): `center` (default, as in Fig. 3 of the paper) puts one full grain
+   (`grain_1`) in the middle of the box and splits the other three in half across the periodic
+   boundaries; `corner` puts a grain center on the cell corner. The bubble placement in
+   `main.cpp` uses the matching `-layout` option (default `center`).
 2. `gmsh hex3d.geo -3 -format msh2 -setnumber Mesh.SaveAll 1 -o hex_raw.msh` meshes the extruded
    cell (conformal tets; gmsh 2.2 format, readable by MFEM 4.9 — MFEM's own `periodic-cube.msh`
    is 2.2 as well, so no need for gmsh format 4 / MFEM 4.10).
