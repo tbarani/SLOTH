@@ -1,0 +1,66 @@
+[
+    {
+        "expression": "mbar * ( Sum(eta[i]*eta[i]*eta[i]*eta[i]/4.0 - eta[i]*eta[i]/2.0, (i, 1, 9)) + 0.5*gmm*( Sum((eta[i]*eta[i])*(eta[j]*eta[j]), (i, 1, 8), (j, 1, 8)) - Sum(eta[i]*eta[i]*eta[i]*eta[i], (i, 1, 8)) ) + gmb*eta[9]*eta[9]*Sum(eta[i]*eta[i], (i, 1, 8)) + 0.25 ) + (Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps) * ( -0.5*muv*muv/(Va*Va*kvm) - muv*cvmeq/Va - 0.5*mug*mug/(Va*Va*kgm) - mug*cgmeq/Va ) + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps) * ( -0.5*muv*muv/(Va*Va*kvb) - muv*cvbeq/Va - 0.5*mug*mug/(Va*Va*kgb) - mug*cgbeq/Va )",
+        "constants": "(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(kvm:0.04015625),(kgm:0.04015625),(kvb:0.04015625),(kgb:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
+        "variables": "eta(1..9)",
+        "auxiliary_variables": "muv,mug",
+        "class_name": "FgFreeEnergy",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "mbar * ( Sum(eta[i]*eta[i]*eta[i]*eta[i]/4.0 - eta[i]*eta[i]/2.0, (i, 1, 9)) + 0.25 ) + mbar * ( gmm*(Sum((eta[i]*eta[i])*(en[j]*en[j]), (i, 1, 8), (j, 1, 8)) - Sum(eta[i]*eta[i]*en[i]*en[i], (i, 1, 8)) - 0.5*( Sum((en[i]*en[i])*(en[j]*en[j]), (i, 1, 8), (j, 1, 8)) - Sum(en[i]*en[i]*en[i]*en[i], (i, 1, 8)) )) + gmb*(en[9]*en[9]*Sum(eta[i]*eta[i], (i, 1, 8)) + eta[9]*eta[9]*Sum(en[i]*en[i], (i, 1, 8)) - en[9]*en[9]*Sum(en[i]*en[i], (i, 1, 8))) ) + ( ( -0.5*muv*muv/(Va*Va*kvm) - muv*cvmeq/Va - 0.5*mug*mug/(Va*Va*kgm) - mug*cgmeq/Va ) - ( -0.5*muv*muv/(Va*Va*kvb) - muv*cvbeq/Va - 0.5*mug*mug/(Va*Va*kgb) - mug*cgbeq/Va ) ) * ( (Sum(eta[i]*eta[i], (i, 1, 8)))*(en[9]*en[9])      - (eta[9]*eta[9])*(Sum(en[i]*en[i], (i, 1, 8))) ) / ( (Sum(en[i]*en[i], (i, 1, 9))+eps)*(Sum(en[i]*en[i], (i, 1, 9))+eps) ) + ( (Sum(en[i]*en[i], (i, 1, 8)))*( -0.5*muv*muv/(Va*Va*kvm) - muv*cvmeq/Va - 0.5*mug*mug/(Va*Va*kgm) - mug*cgmeq/Va ) + (en[9]*en[9])*( -0.5*muv*muv/(Va*Va*kvb) - muv*cvbeq/Va - 0.5*mug*mug/(Va*Va*kgb) - mug*cgbeq/Va ) ) / (Sum(en[i]*en[i], (i, 1, 9))+eps)",
+        "constants": "(mbar:0.0046875),(gmm:1.5),(gmb:0.922),(Va:0.0409),(kvm:0.04015625),(kgm:0.04015625),(kvb:0.04015625),(kgb:0.04015625),(cvmeq:2.507e-13),(cgmeq:2.507e-13),(cvbeq:0.546),(cgbeq:0.454),(eps:1.0e-12)",
+        "variables": "eta(1..9)",
+        "explicit_variables": "en(1..9)",
+        "auxiliary_variables": "muv,mug",
+        "class_name": "FgFreeEnergySI",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "0.263671875*sdot(eta(1..9))",
+        "variables": "eta(1..9)",
+        "class_name": "FgGradEnergy",
+        "outputfile": "FissionGasCoefficients",
+        "gradient": true
+    },
+    {
+        "expression": "(Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*km) + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*kb)",
+        "constants": "(Va:0.0409),(km:0.04015625),(kb:0.04015625),(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..9)",
+        "class_name": "FgSusceptibility",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "( (Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*km) + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*kb) )*mu + ( (Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)*cmeq + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)*cbeq )/Va",
+        "constants": "(Va:0.0409),(km:0.04015625),(kb:0.04015625),(cmeq:2.507e-13),(cbeq:0.546),(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..9)",
+        "class_name": "FgDensityVac",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "( (Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*km) + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)/(Va*Va*kb) )*mu + ( (Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)*cmeq + (eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)*cbeq )/Va",
+        "constants": "(Va:0.0409),(km:0.04015625),(kb:0.04015625),(cmeq:2.507e-13),(cbeq:0.454),(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..9)",
+        "class_name": "FgDensityGas",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "(Sum(eta[i]*eta[i], (i, 1, 8)))/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)",
+        "constants": "(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..9)",
+        "class_name": "FgMatrixFraction",
+        "outputfile": "FissionGasCoefficients"
+    },
+    {
+        "expression": "(eta[9]*eta[9])/(Sum(eta[i]*eta[i], (i, 1, 9))+eps)",
+        "constants": "(eps:1.0e-12)",
+        "variables": "mu",
+        "auxiliary_variables": "eta(1..9)",
+        "class_name": "SwitchingFunctionBubble",
+        "outputfile": "FissionGasCoefficients"
+    }
+]
